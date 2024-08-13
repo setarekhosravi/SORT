@@ -217,6 +217,7 @@ def main():
 
         det_time = []
         track_time = []
+        loop_time = []
         results = []
         frame_id = 1
 
@@ -274,6 +275,7 @@ def main():
             frame_id += 1
             det_time.append(t2-t1)
             track_time.append(t3-t2)
+            loop_time.append(t3-t1)
 
         if args.save_video.lower() == "true":
             Video.release()
@@ -282,12 +284,15 @@ def main():
 
         avg_time_det = sum(det_time)/len(det_time)
         avg_time_track = sum(track_time)/len(track_time)
+        avg_total_time = sum(loop_time)/len(loop_time)
 
         fps_det = 1/avg_time_det
         fps_track = 1/avg_time_track
+        fps_total = 1/avg_total_time
 
         print(f"Average Inference Time for Detection: {avg_time_det}, FPS: {fps_det}")
         print(f"Average Inference Time for Tracking: {avg_time_track}, FPS: {fps_track}")
+        print(f"Total Average Inference Time: {avg_total_time}, FPS: {fps_total}")
     
     else:
         raise ValueError("Not Implemented, choose image!")
