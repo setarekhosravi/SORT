@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 """
-    By using this code you can tune the trackers parameters with Optuna framework
+    By using this code you can tune the tracker parameters with Optuna framework
     Attention: You should have TrackEval repository on your local machine, 
                then modify the pathes in this code.
     @author: STRH
-    Created on Jul 30
+    Created on Aug 14
 """
 
 # import libraries
