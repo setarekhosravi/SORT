@@ -73,7 +73,7 @@ def objective(trial):
     tracker = Sort(
         max_age=max_age,
         min_hits=min_hits,
-        asso_threshold=iou_threshold
+        iou_threshold=iou_threshold
     )
 
     HOTA, MOTA, MOTP, IDF1 =  run_validation(args, tracker=tracker, trial_num=trial.number)
