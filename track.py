@@ -62,20 +62,9 @@ if args.gt:
     gt_path = args.gt
 else:
     # loading model using torch.hub
-    # model = torch.hub.load('ultralytics/yolov5', 'custom', path= args.weights, force_reload= False)
-    # model.float()
-    # model.eval()
-
-    # load detection weights using detectmultibackend
-    model = DetectMultiBackend(args.weights, device=device, dnn=False)
-    stride, names, pt, jit, onnx, engine = model.stride, model.names, model.pt, model.jit, model.onnx, model.engine
-
-    imgsz = check_img_size(imgsz, s=stride)  # check image size
-    if half:
-        model.model.half()  # to FP16
-    # Get names and colors
-    names = model.module.names if hasattr(model, 'module') else model.names
-    colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
+    model = torch.hub.load('ultralytics/yolov5', 'custom', path= args.weights, force_reload= False)
+    model.float()
+    model.eval()
 
 #  get images list when input-type is image
 def get_image_list(path):
@@ -122,86 +111,6 @@ def read_gt(file_path):
     frames_boxes_sorted = dict(sorted(frames_boxes.items()))
     return frames_boxes_sorted
 
-def letterbox(img ,new_shape, color=(114, 114, 114), auto=False, scaleFill=False, scaleup=True):
-    # Resize image to a 32-pixel-multiple rectangle https://github.com/ultralytics/yolov3/issues/232
-    shape = img.shape[:2]  # current shape [height, width]
-    if isinstance(new_shape, int):
-        new_shape = (new_shape, new_shape)
-
-    # Scale ratio (new / old)
-    r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
-    if not scaleup:  # only scale down, do not scale up (for better test mAP)
-        r = min(r, 1.0)
-
-    # Compute padding
-    ratio = r, r  # width, height ratios
-    new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))
-    dw, dh = new_shape[1] - new_unpad[0], new_shape[0] - new_unpad[1]  # wh padding
-    if auto:  # minimum rectangle
-        dw, dh = np.mod(dw, 32), np.mod(dh, 32)  # wh padding
-    elif scaleFill:  # stretch
-        dw, dh = 0.0, 0.0
-        new_unpad = (new_shape[1], new_shape[0])
-        ratio = new_shape[1] / shape[1], new_shape[0] / shape[0]  # width, height ratios
-
-    dw /= 2  # divide padding into 2 sides
-    dh /= 2
-
-    if shape[::-1] != new_unpad:  # resize
-        img = cv2.resize(img, new_unpad, interpolation=cv2.INTER_LINEAR)
-    top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
-    left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
-    img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
-    return img, ratio, (dw, dh)
- 
-def YOLOv5_detect(image,img_size,conf_thres,iou_thres):
-    global t1, t3, t0, t2
-    # Run inference
-    img = torch.zeros((1, 3, img_size, img_size), device=device)  # init img
-    t0 = time.time()
-    img0 =image  # init img
-    img = letterbox(img0, new_shape=(img_size,img_size))[0]
-
-    # Convert
-    img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
-    img = np.ascontiguousarray(img)
-
-    img = torch.from_numpy(img).to(device)
-    img = img.half() if half else img.float()  # uint8 to fp16/32
-    img /= 255.0  # 0 - 255 to 0.0 - 1.0
-    if img.ndimension() == 3:
-        img = img.unsqueeze(0)
-
-    # Inference
-    t1 = time.time()
-    pred = model(img, augment=False, visualize=False)
-    t2 = time.time()
-    # Apply NMS
-    pred = non_max_suppression(pred, conf_thres, iou_thres, False, False, max_det=1000)
-    t3 = time.time()
-    # Process detections
-    print('{} s is YOLO detect time'.format(time.time()-t1))
-    pred_lst=[];coun=0
-    for i, det in enumerate(pred):  # detections per image
-      if det is not None and len(det):
-        coun+=1
-        # Rescale boxes from img_size to im0 size
-        det[:, :4] = scale_boxes(img.shape[2:], det[:, :4], img0.shape).round()
-        for *xyxy, conf, cls in reversed(det):
-          #plot_one_box(xyxy, img0, label='Quad', color=colors[int(cls)], line_thickness=2)
-          xmin=xyxy[0].cpu().detach().numpy().tolist()
-          ymin=xyxy[1].cpu().detach().numpy().tolist()
-          xmax=xyxy[2].cpu().detach().numpy().tolist()
-          ymax=xyxy[3].cpu().detach().numpy().tolist()
-          cfi=conf.cpu().detach().numpy().tolist()
-          cls=int(cls.cpu().detach().numpy().tolist())
-          #if cls==0:
-          #  cl='Quad'
-          pred_lst.append([xmin, ymin, xmax, ymax, cfi, cls])
-          #cv2.imwrite('/content/'+str(coun)'.jpg',img0)
-      return pred_lst
-    
-
 def main():
     # initialize the tracker
     tracker = Sort(max_age=1, min_hits=3, iou_threshold=0.3)
@@ -235,13 +144,11 @@ def main():
                 dets = read_gt(gt_path)[frame_id]
             else:
                 # using torch.hub
-                # preds = model(img)
+                preds = model(img)
+            
+                # get dets in xyxy format
+                dets = preds.xyxy[0].cpu().numpy()  # if you are using torch.hub
 
-                # using another loading method
-                dets = YOLOv5_detect(img, imgsz, 0.1, 0.5)
-
-            # get dets in xyxy format
-            # dets = preds.xyxy[0].cpu().numpy()  # if you are using torch.hub
             t2 = time.time()
             if len(dets) > 0:
                 tracks = tracker.update(np.array(dets))
@@ -272,6 +179,7 @@ def main():
             key = cv2.waitKey(1) & 0xFF
             if key == ord(' ') or key == ord('q'):
                 break
+            
             frame_id += 1
             det_time.append(t2-t1)
             track_time.append(t3-t2)
