@@ -4,7 +4,7 @@
 This project demonstrates the integration of the SORT (Simple Online and Realtime Tracking) algorithm with YOLOv5 for efficient and accurate object tracking. By combining YOLOv5's robust object detection capabilities with SORT's lightweight tracking, this implementation provides a seamless solution for real-time multi-object tracking. The system is designed to detect and track objects across frames in a video stream, maintaining high performance while being easy to use and modify for various applications.
 </p>
 
-# Run on Image Sequences
+## Run on Image Sequences
 
 1. To run the object tracking with YOLOv5 and SORT, follow these steps:
 
